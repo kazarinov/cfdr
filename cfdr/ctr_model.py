@@ -5,9 +5,10 @@ import pickle
 import numpy as np
 from fabric.api import local
 
-from cfdr.utils.helpers import (
-    silentremove,
+from cfdr.utils.helpers import silentremove
+from cfdr.utils.mathematics import (
     sigmoid,
+    loglikelihood,
 )
 from cfdr.utils.vw import compose_vw_line
 
@@ -55,21 +56,53 @@ class CTRModel(object):
         self._generate_coefficients()
         self._generate_shows_clicks()
 
+    def _generate_tree_coeffiecients(self, loc, scale, count):
+        coefficients = np.zeros(count)
+
+        levels_number = int(round(np.log2(count))) + 1
+        loc = float(loc) / levels_number
+        scale = np.sqrt((float(scale)**2) / levels_number)
+        for level in xrange(levels_number):
+            step = 2 ** level
+            add_coef = 0
+            for i in xrange(count):
+                if i % step == 0:
+                    add_coef = np.random.normal(loc, scale)
+                coefficients[i] += add_coef
+        return coefficients
+
     def _generate_coefficients(self):
         for feature_name, feature_params in self.features_config.items():
             if feature_params.get('type') == 'tree':
-                self.coefficients[feature_name] = np.zeros(feature_params['count'])
+                if feature_params.get('parts'):
+                    tree_coefficients = []
+                    sizes = []
+                    part_scale = np.sqrt((feature_params['scale']**2) / len(feature_params['parts']))
+                    for feature_part_name in feature_params['parts']:
+                        if self.features_config[feature_part_name].get('type') == 'tree':
+                            tree_coefficients.append(self._generate_tree_coeffiecients(
+                                loc=feature_params['loc'],
+                                scale=part_scale,
+                                count=self.features_config[feature_part_name]['count'],
+                            ))
+                        else:
+                            tree_coefficients.append(np.random.normal(
+                                self.features_config[feature_part_name]['loc'],
+                                self.features_config[feature_part_name]['scale'],
+                                self.features_config[feature_part_name]['count'],
+                            ))
+                        sizes.append(self.features_config[feature_part_name]['count'])
 
-                levels_number = int(round(np.log2(feature_params['count']))) + 1
-                loc = float(feature_params['loc']) / levels_number
-                scale = float(feature_params['scale']) / levels_number
-                for level in xrange(levels_number):
-                    step = 2 ** level
-                    add_coef = 0
-                    for i in xrange(feature_params['count']):
-                        if i % step == 0:
-                            add_coef = np.random.normal(loc, scale)
-                        self.coefficients[feature_name][i] += add_coef
+                    self.coefficients[feature_name] = np.zeros(sizes)
+                    for feature_part_values in itertools.product(*[xrange(count) for count in sizes]):
+                        for feature_part_index, feature_part_value in enumerate(feature_part_values):
+                            self.coefficients[feature_name][feature_part_values] += tree_coefficients[feature_part_index][feature_part_value]
+                else:
+                    self.coefficients[feature_name] = self._generate_tree_coeffiecients(
+                        loc=feature_params['loc'],
+                        scale=feature_params['scale'],
+                        count=feature_params['count'],
+                    )
             else:
                 if feature_params.get('parts'):
                     count = [self.features_config[feature_part_name]['count']
@@ -185,7 +218,7 @@ class CTRModel(object):
             if line_index < train_lines_number:
                 train_file.write(line)
             else:
-                if test_length and (line_index - train_lines_number) > test_length:
+                if test_length and (line_index - train_lines_number) >= test_length:
                     break
                 test_file.write(line)
             line_index += 1
@@ -218,16 +251,14 @@ class CTRModel(object):
         for feature_values in itertools.product(*[xrange(count) for count in sizes]):
             s = self.shows[feature_values]
             c = self.clicks[feature_values]
-            ctr = c / s
-            ll += c * np.log(ctr) + (s - c) * np.log(1 - ctr)
+            ll += loglikelihood(s, c)
 
-        return -1 * (ll / np.sum(self.shows))
+        return ll / np.sum(self.shows)
 
     def loglikelihood0(self):
         shows_n = np.sum(self.shows)
         clicks_n = np.sum(self.clicks)
-        av_ctr = float(clicks_n) / shows_n
-        return -1 * (clicks_n * np.log(av_ctr) + (shows_n - clicks_n) * np.log(1 - av_ctr)) / shows_n
+        return loglikelihood(shows_n, clicks_n) / shows_n
 
     def likelihood_ratio(self):
         return self.loglikelihood0() - self.loglikelihood()

@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 import math
 import itertools
+import logging
 import multiprocessing
 
 from cfdr.utils.vw import parse_vw_line, compose_vw_line
+from cfdr.utils.mathematics import loglikelihood
+
+
+log = logging.getLogger(__name__)
 
 
 class Node(object):
@@ -102,7 +107,7 @@ class FeatureClustering(object):
                         pass
                     elif output_mode == 'part_tree':
                         features.append((feature_name, feature_value))
-                        feature_value_tree = feature_value_tree[len(feature_value_tree) - output_mode['levels']: len(feature_value_tree)]
+                        feature_value_tree = feature_value_tree[len(feature_value_tree) - output_params['levels']: len(feature_value_tree)]
                     features.append((feature_name + '_tree', feature_value_tree))
                 else:
                     features.append((feature_name, feature_value))
@@ -110,22 +115,13 @@ class FeatureClustering(object):
             output_file.write(compose_vw_line(example_params['label'], features) + '\n')
 
     def loglikelihood0(self):
-        av_ctr = float(self.clicks_count) / self.shows_count
-        return -1 * (
-            self.clicks_count * math.log(av_ctr) + (self.shows_count - self.clicks_count) * math.log(1 - av_ctr))
-
-    def loglikelihood_i(self, shows, clicks):
-        if clicks == 0 or shows == 0 or clicks == shows:
-            return 0
-
-        ctr = float(clicks) / shows
-        return -1 * (clicks * math.log(ctr) + (shows - clicks) * math.log(1 - ctr))
+        return loglikelihood(self.shows_count, self.clicks_count)
 
     def loglikelihood(self, feature_data):
         ll = 0
         for feature_value, feature_value_data in feature_data.iteritems():
             for _, (shows, clicks) in feature_value_data.iteritems():
-                ll += self.loglikelihood_i(shows, clicks)
+                ll += loglikelihood(shows, clicks)
         return ll
 
     def cluster(self, input_logfile, tree_features, slice_features=None):
@@ -167,7 +163,7 @@ class FeatureClustering(object):
                 tmp_feature_value_data = {}
                 for feature_value_pair_index in feature_value_pair:
                     for feature_values, (shows, clicks) in feature_data[feature_value_pair_index].iteritems():
-                        ll_pair -= self.loglikelihood_i(shows, clicks)
+                        ll_pair -= loglikelihood(shows, clicks)
 
                         tmp_feature_values = list(feature_values)
                         tmp_feature_values[feature_index] = None
@@ -180,7 +176,7 @@ class FeatureClustering(object):
                             tmp_feature_value_data[tmp_feature_values] = (shows + shows_tmp, clicks + clicks_tmp)
 
                 for feature_values, (shows, clicks) in tmp_feature_value_data.iteritems():
-                    ll_pair += self.loglikelihood_i(shows, clicks)
+                    ll_pair += loglikelihood(shows, clicks)
 
                 if ll_pair <= min_ll_pair:
                     min_ll_pair = ll_pair
@@ -198,9 +194,7 @@ class FeatureClustering(object):
             )
             current_extra_node_index += 1
             ll = min_ll_pair
-            print 'min_pair', min_pair
-            print 'current_extra_node_index', current_extra_node_index
-            print 'min_ll_pair', min_ll_pair
+            log.debug('min_pair %s, extra_node_index=%s, min_ll_pair=%s', min_pair, current_extra_node_index, min_ll_pair)
 
         tree = extra_nodes[feature_data.keys()[0]]
         return tree
