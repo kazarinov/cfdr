@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-import math
 import itertools
 import logging
+import pickle
 import multiprocessing
 
-from cfdr.utils.vw import parse_vw_line, compose_vw_line
+from cfdr.utils.tools import parse_vw_line, compose_vw_line
 from cfdr.utils.mathematics import loglikelihood
 
 
@@ -62,9 +62,12 @@ class FeatureClustering(object):
         self.clicks_count = 0
         self.trees = None
 
-    def preprocess_log(self, logfile, slice_features=None):
+    def preprocess_log(self, logfile, slice_features=None, parser=None):
+        if parser is None:
+            parser = parse_vw_line
+
         for line in open(logfile):
-            example_params = parse_vw_line(line)
+            example_params = parser(line)
             if self.features is None:
                 self.features = [set() for i in xrange(len(example_params['features']))]
                 self.features_mapping = dict([(feature_name, feature_index)
@@ -87,7 +90,13 @@ class FeatureClustering(object):
                 self.clicks_count += 1
             self.data[example_values] = (shows, clicks)
 
-    def convert_log(self, input_logfile, output_logfile, output_params):
+    def convert_log(self, input_logfile, output_logfile, output_params, parser=None, composer=None):
+        if parser is None:
+            parser = parse_vw_line
+
+        if composer is None:
+            composer = compose_vw_line
+
         output_file = open(output_logfile, 'w+')
         output_mode = output_params.get('mode', 'full_tree')
         feature_mapping = {}
@@ -96,7 +105,7 @@ class FeatureClustering(object):
             feature_mapping[feature_name] = feature_tree.get_leaves_parents()
 
         for line in open(input_logfile):
-            example_params = parse_vw_line(line)
+            example_params = parser(line)
             features = []
             for feature_name, feature_value in example_params['features']:
                 if feature_name in self.trees.keys():
@@ -112,7 +121,7 @@ class FeatureClustering(object):
                 else:
                     features.append((feature_name, feature_value))
 
-            output_file.write(compose_vw_line(example_params['label'], features) + '\n')
+            output_file.write(composer(example_params['label'], features) + '\n')
 
     def loglikelihood0(self):
         return loglikelihood(self.shows_count, self.clicks_count)
@@ -124,7 +133,7 @@ class FeatureClustering(object):
                 ll += loglikelihood(shows, clicks)
         return ll
 
-    def cluster(self, input_logfile, tree_features, slice_features=None):
+    def cluster(self, input_logfile, tree_features, slice_features=None, parser=None):
         """
         output_params: {
             'mode': <mode>,
@@ -136,7 +145,7 @@ class FeatureClustering(object):
          * tree_without_leaves - дерево без листьев
          * part_tree
         """
-        self.preprocess_log(input_logfile, slice_features=slice_features)
+        self.preprocess_log(input_logfile, slice_features=slice_features, parser=parser)
 
         self.trees = {}
         for feature_nane in tree_features:
@@ -198,6 +207,18 @@ class FeatureClustering(object):
 
         tree = extra_nodes[feature_data.keys()[0]]
         return tree
+
+    @staticmethod
+    def load(filename):
+        f = file(filename)
+        ctr_model = pickle.loads(f.read())
+        f.close()
+        return ctr_model
+
+    def save(self, filename):
+        f = file(filename, 'w+')
+        f.write(pickle.dumps(self))
+        f.close()
 
 
 """

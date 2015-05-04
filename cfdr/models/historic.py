@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from cfdr.utils.vw import parse_vw_line
-from cfdr.utils.mathematics import loglikelihood
+from cfdr.utils.tools import parse_vw_line
 
 from .base import BaseClassifier
 

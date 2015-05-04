@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from fabric.api import local
 
-from cfdr.utils.vw import make_vw_command
+from cfdr.utils.tools import make_vw_command
 from cfdr.utils.helpers import Timer
 from cfdr.utils.mathematics import sigmoid
 
@@ -16,8 +16,6 @@ log = logging.getLogger(__name__)
 
 
 class LogisticVWClassifier(BaseClassifier):
-    scoring = 'log_loss'
-    classes = [-1, 1]
 
     def __init__(self, model_filename=None, debug=False, **kwargs):
         self.vw_params = {
@@ -45,7 +43,8 @@ class LogisticVWClassifier(BaseClassifier):
         return predictions
 
     def train(self, train_filename):
-        self.model_filename = train_filename + '.model'
+        if self.model_filename is None:
+            self.model_filename = train_filename + '.model'
 
         with Timer('preprocess train data'):
             self.preprocess_data(train_filename)

@@ -10,7 +10,10 @@ from cfdr.utils.mathematics import (
     sigmoid,
     loglikelihood,
 )
-from cfdr.utils.vw import compose_vw_line
+from cfdr.utils.tools import (
+    compose_vw_line,
+    compose_libffm_line,
+)
 
 
 class CTRModel(object):
@@ -187,11 +190,13 @@ class CTRModel(object):
             clicks_for_features = int(round(shows_for_features * feature_values_ctr))
 
             for i in xrange(shows_for_features):
-                is_click = 1 if i < clicks_for_features else -1
+                is_click = i < clicks_for_features
                 if format == 'csv':
-                    tmplogfile.write(('%s,' % is_click) + ','.join(map(str, feature_values)) + '\n')
+                    tmplogfile.write(('%s,' % int(is_click)) + ','.join(map(str, feature_values)) + '\n')
                 elif format == 'vw':
-                    tmplogfile.write(compose_vw_line(is_click, zip(features, map(str, feature_values))) + '\n')
+                    tmplogfile.write(compose_vw_line(int(is_click), zip(features, map(str, feature_values))) + '\n')
+                elif format == 'libffm':
+                    tmplogfile.write(compose_libffm_line(is_click, zip(features, map(str, feature_values))) + '\n')
 
         tmplogfile.close()
 
