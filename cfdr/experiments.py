@@ -111,7 +111,6 @@ def ctr_libffm(model='clicklog', from_cache=False, debug=False, train_dataset_le
             )
             real_ctr_model.save(model + '.dat')
 
-
         with Timer('converted datasets'):
             f_clustering = FeatureClustering()
             f_clustering.cluster(TRAIN_FILE + '.vw', VW_TREE_FEATURES, parser=parse_vw_line)
@@ -218,6 +217,46 @@ def ctr_libffm(model='clicklog', from_cache=False, debug=False, train_dataset_le
         log.info('LogisticVWClassifier with clusteringLLr train - %s', (ll0 - train_ll))
         log.info('LogisticVWClassifier with clusteringLLr test - %s', (ll0 - test_ll))
 
+    with Timer('LogisticVWClassifier FTRL'):
+        ctr_model = LogisticVWClassifier(
+            debug=debug,
+            passes=100,
+            bit_precision=13,
+
+            ftrl=True,
+            ftrl_alpha=0.1,
+            ftrl_beta=0.0,
+        )
+        ctr_model.train(TRAIN_FILE + '.vw')
+        train_ll = ctr_model.test(TRAIN_FILE + '.vw')
+        test_ll = ctr_model.test(TEST_FILE + '.vw')
+        results['LogisticVWClassifier'] = ((train_ll, (ll0 - train_ll)), (test_ll, (ll0 - test_ll)))
+
+        log.info('LogisticVWClassifier FTRL LL train - %s', train_ll)
+        log.info('LogisticVWClassifier FTRL LL test - %s', test_ll)
+        log.info('LogisticVWClassifier FTRL LLr train - %s', (ll0 - train_ll))
+        log.info('LogisticVWClassifier FTRL LLr test - %s', (ll0 - test_ll))
+
+    with Timer('LogisticVWClassifier FTRL with clustering'):
+        ctr_model = LogisticVWClassifier(
+            debug=debug,
+            passes=100,
+            bit_precision=13,
+
+            ftrl=True,
+            ftrl_alpha=0.1,
+            ftrl_beta=0.0,
+        )
+        ctr_model.train(TRAIN_FILE_CLUSTERING + '.vw')
+        train_ll = ctr_model.test(TRAIN_FILE_CLUSTERING + '.vw')
+        test_ll = ctr_model.test(TEST_FILE_CLUSTERING + '.vw')
+        results['LogisticVWClassifier FTRL with clustering'] = ((train_ll, (ll0 - train_ll)), (test_ll, (ll0 - test_ll)))
+
+        log.info('LogisticVWClassifier FTRL with clustering LL train - %s', train_ll)
+        log.info('LogisticVWClassifier FTRL with clustering LL test - %s', test_ll)
+        log.info('LogisticVWClassifier FTRL with clusteringLLr train - %s', (ll0 - train_ll))
+        log.info('LogisticVWClassifier FTRL with clusteringLLr test - %s', (ll0 - test_ll))
+
 
 def ctr_logistic_vw(model='clicklog', from_cache=False, debug=False, train_dataset_length=100000, test_dataset_length=100000, index=0, with_clustering=True):
     TRAIN_FILE = model + '.train.vw'
@@ -230,7 +269,7 @@ def ctr_logistic_vw(model='clicklog', from_cache=False, debug=False, train_datas
         real_ctr_model = CTRModel.load(model + '.dat')
     else:
         with Timer('init real model'):
-            real_ctr_model = CTRModel(FEATURES_CONFIG, free_coef=-1, lam=20)
+            real_ctr_model = CTRModel(FEATURES_CONFIG, free_coef=-1, lam=100)
             real_ctr_model.init()
 
         with Timer('generate clicklog'):
@@ -245,15 +284,15 @@ def ctr_logistic_vw(model='clicklog', from_cache=False, debug=False, train_datas
     if with_clustering:
         f_clustering = FeatureClustering()
         with Timer('clustering'):
-            f_clustering.cluster(TRAIN_FILE, TREE_FEATURES)
+            f_clustering.cluster(TRAIN_FILE, VW_TREE_FEATURES)
         with Timer('converted train set'):
             f_clustering.convert_log(model + '.train.vw', TRAIN_FILE_CLUSTERING + "2", {'mode': 'part_tree', 'levels': 2})
-            f_clustering.convert_log(model + '.train.vw', TRAIN_FILE_CLUSTERING + "3", {'mode': 'part_tree', 'levels': 3})
-            f_clustering.convert_log(model + '.train.vw', TRAIN_FILE_CLUSTERING + "4", {'mode': 'part_tree', 'levels': 4})
+            # f_clustering.convert_log(model + '.train.vw', TRAIN_FILE_CLUSTERING + "3", {'mode': 'part_tree', 'levels': 3})
+            # f_clustering.convert_log(model + '.train.vw', TRAIN_FILE_CLUSTERING + "4", {'mode': 'part_tree', 'levels': 4})
         with Timer('converted test set'):
             f_clustering.convert_log(model + '.test.vw', TEST_FILE_CLUSTERING + "2", {'mode': 'part_tree', 'levels': 2})
-            f_clustering.convert_log(model + '.test.vw', TEST_FILE_CLUSTERING + "3", {'mode': 'part_tree', 'levels': 3})
-            f_clustering.convert_log(model + '.test.vw', TEST_FILE_CLUSTERING + "4", {'mode': 'part_tree', 'levels': 4})
+            # f_clustering.convert_log(model + '.test.vw', TEST_FILE_CLUSTERING + "3", {'mode': 'part_tree', 'levels': 3})
+            # f_clustering.convert_log(model + '.test.vw', TEST_FILE_CLUSTERING + "4", {'mode': 'part_tree', 'levels': 4})
 
     with Timer('calculate likelihood'):
         ll = real_ctr_model.loglikelihood()
@@ -265,15 +304,55 @@ def ctr_logistic_vw(model='clicklog', from_cache=False, debug=False, train_datas
 
     results = []
 
-    ctr_prediction = LogisticVWClassifier(debug=debug, passes=200, bit_precision=13)
+    ctr_prediction = LogisticVWClassifier(
+        debug=debug,
+        passes=100,
+        bit_precision=13,
+    )
     baseline_model_log_loss = ctr_prediction.run(TRAIN_FILE, TEST_FILE)
-    log.info('usual model log loss = %s', baseline_model_log_loss)
+    log.info('LogisticVWClassifier LL = %s', baseline_model_log_loss)
     results.append((train_dataset_length, index, ll, baseline_model_log_loss))
 
+    ctr_prediction = LogisticVWClassifier(
+        debug=debug,
+        passes=100,
+        bit_precision=13,
+
+        ftrl=True,
+        ftrl_alpha=0.1,
+        ftrl_beta=0.0,
+    )
+    ftrl_model_log_loss = ctr_prediction.run(TRAIN_FILE, TEST_FILE)
+    log.info('FTRL LogisticVWClassifier LL = %s', baseline_model_log_loss)
+    results.append((train_dataset_length, index, ll, ftrl_model_log_loss))
+    log.info('LLr baseline - clistering = %s',
+                 (baseline_model_log_loss[0] - ftrl_model_log_loss[0],
+                  baseline_model_log_loss[1] - ftrl_model_log_loss[1]))
+
     if with_clustering:
-        ctr_prediction = LogisticVWClassifier(debug=debug, passes=200, bit_precision=13)
+        ctr_prediction = LogisticVWClassifier(
+            debug=debug,
+            passes=100,
+            bit_precision=13,
+        )
         clustering_model_log_loss = ctr_prediction.run(TRAIN_FILE_CLUSTERING + "2", TEST_FILE_CLUSTERING + "2")
-        log.info('usual model log loss = %s', clustering_model_log_loss)
+        log.info('LogisticVWClassifier with clustering = %s', clustering_model_log_loss)
+        results.append((train_dataset_length, index, ll, clustering_model_log_loss))
+        log.info('LLr baseline - clistering = %s',
+                 (baseline_model_log_loss[0] - clustering_model_log_loss[0],
+                  baseline_model_log_loss[1] - clustering_model_log_loss[1]))
+
+        ctr_prediction = LogisticVWClassifier(
+            debug=debug,
+            passes=100,
+            bit_precision=13,
+
+            ftrl=True,
+            ftrl_alpha=0.1,
+            ftrl_beta=0.0,
+        )
+        clustering_model_log_loss = ctr_prediction.run(TRAIN_FILE_CLUSTERING + "2", TEST_FILE_CLUSTERING + "2")
+        log.info('FTRL LogisticVWClassifier with clustering = %s', clustering_model_log_loss)
         results.append((train_dataset_length, index, ll, clustering_model_log_loss))
         log.info('LLr baseline - clistering = %s',
                  (baseline_model_log_loss[0] - clustering_model_log_loss[0],
@@ -310,7 +389,7 @@ if __name__ == '__main__':
     # results = ctr_logistic_vw(
     #     model='clicklog',
     #     from_cache=False,
-    #     debug=False,
+    #     debug=True,
     #     index=1,
     #     train_dataset_length=500000,
     #     test_dataset_length=500000,

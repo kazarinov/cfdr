@@ -28,3 +28,13 @@ def silentremove(filename):
     except OSError as e:  # this would be "except OSError, e:" before Python 2.6
         if e.errno != errno.ENOENT:  # errno.ENOENT = no such file or directory
             raise  # re-raise exception if a different error occured
+
+
+class GetList(list):
+    """Allows lists to be interfaced with get as dicts would be.
+    Unfortunatey, this workaround is slower.
+    'default' is not used since lists are initalized with defaults
+    already.
+    """
+    def get(self, key, default):
+        return self[key]

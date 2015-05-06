@@ -29,7 +29,7 @@ def make_vw_command(predictions='/dev/stdout',
     kwargs['predictions'] = predictions
     kwargs['quiet'] = quiet
     kwargs['save_resume'] = save_resume
-    return make_command('vw', **kwargs)
+    return make_command('./vowpal_wabbit/vowpalwabbit/vw', **kwargs)
 
 
 def make_command(program, *args, **kwargs):
