@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from cfdr.ctr_model import CTRModel
-from cfdr.models.logistic_vw import LogisticVWClassifier
-from cfdr.models.historic import HistoricClassifier
-from cfdr.models.libffm import LibFFMClassifier
+from cfdr.experiments.ctr_model import CTRModel
+from cfdr.experiments.models.logistic_vw import LogisticVWClassifier
+from cfdr.experiments.models.historic import HistoricClassifier
+from cfdr.experiments.models.libffm import LibFFMClassifier
 from cfdr.clustering import FeatureClustering
 from cfdr.utils.helpers import Timer
+from cfdr.utils.logs import load_dict_config
 from cfdr.utils.tools import (
     parse_vw_line,
     parse_libffm_line,
     compose_libffm_line,
     compose_vw_line,
 )
-
-from cfdr import settings
+from cfdr.settings import LOGGING
 
 
 log = logging.getLogger(__name__)
@@ -376,6 +376,7 @@ def ctr_logistic_vw(model='clicklog', from_cache=False, debug=False, train_datas
 
 
 if __name__ == '__main__':
+    load_dict_config(LOGGING)
     # results = grid_prediction(debug=True)
     # results = ctr_prediction(model='clicklog2-output', dataset_length=100000, debug=True, index=1)
 
@@ -404,4 +405,3 @@ if __name__ == '__main__':
         train_dataset_length=500000,
         test_dataset_length=500000,
     )
-

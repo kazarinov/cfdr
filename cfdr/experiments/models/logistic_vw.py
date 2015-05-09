@@ -8,8 +8,7 @@ from fabric.api import local
 from cfdr.utils.tools import make_vw_command
 from cfdr.utils.helpers import Timer
 from cfdr.utils.mathematics import sigmoid
-
-from .base import BaseClassifier
+from cfdr.experiments.models.base import BaseClassifier
 
 
 log = logging.getLogger(__name__)

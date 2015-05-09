@@ -52,8 +52,36 @@ class Node(object):
         return result
 
 
+def calculate_pair_ll(feature_value_pair):
+    ll_pair = 0
+    tmp_feature_value_data = {}
+    for feature_value_pair_index in feature_value_pair:
+        for feature_values, (shows, clicks) in FeatureClustering.feature_data[feature_value_pair_index].iteritems():
+            ll_pair -= loglikelihood(shows, clicks)
+
+            tmp_feature_values = list(feature_values)
+            tmp_feature_values[FeatureClustering.feature_index] = None
+            tmp_feature_values = tuple(tmp_feature_values)
+
+            if tmp_feature_values not in tmp_feature_value_data.keys():
+                tmp_feature_value_data[tmp_feature_values] = (shows, clicks)
+            else:
+                shows_tmp, clicks_tmp = tmp_feature_value_data[tmp_feature_values]
+                tmp_feature_value_data[tmp_feature_values] = (shows + shows_tmp, clicks + clicks_tmp)
+
+    for feature_values, (shows, clicks) in tmp_feature_value_data.iteritems():
+        ll_pair += loglikelihood(shows, clicks)
+
+    return ll_pair
+
+
 class FeatureClustering(object):
-    def __init__(self):
+    feature_data = None
+    feature_index = None
+
+    def __init__(self, processes=1):
+        self.processes = processes
+
         self.features_mapping = None
         self.features = None
 
@@ -149,26 +177,94 @@ class FeatureClustering(object):
 
         self.trees = {}
         for feature_nane in tree_features:
-            self.trees[feature_nane] = self.cluster_feature(feature_nane)
+            if self.processes > 1:
+                self.trees[feature_nane] = self.cluster_feature_parallel(feature_nane)
+            else:
+                self.trees[feature_nane] = self.cluster_feature(feature_nane)
         return self.trees
+
+    def _join_feature_value_pair(self, feature_index, feature_value_pair, feature_data):
+        tmp_feature_value_data = {}
+        for feature_value_pair_index in feature_value_pair:
+            for feature_values, (shows, clicks) in feature_data[feature_value_pair_index].iteritems():
+                tmp_feature_values = list(feature_values)
+                tmp_feature_values[feature_index] = None
+                tmp_feature_values = tuple(tmp_feature_values)
+
+                if tmp_feature_values not in tmp_feature_value_data.keys():
+                    tmp_feature_value_data[tmp_feature_values] = (shows, clicks)
+                else:
+                    shows_tmp, clicks_tmp = tmp_feature_value_data[tmp_feature_values]
+                    tmp_feature_value_data[tmp_feature_values] = (shows + shows_tmp, clicks + clicks_tmp)
+        return tmp_feature_value_data
+
+    def cluster_feature_parallel(self, feature_name):
+        feature_index = FeatureClustering.feature_index = self.features_mapping[feature_name]
+        FeatureClustering.feature_data = {}
+        for feature_value, data in self.data.iteritems():
+            feature_value_data = FeatureClustering.feature_data.setdefault(feature_value[feature_index], {})
+            feature_value_data[feature_value] = data
+
+        current_extra_node_index = 1
+        extra_nodes = {}
+
+        while len(FeatureClustering.feature_data.keys()) > 1:
+            pool = multiprocessing.Pool(self.processes)
+            min_ll_pair_delta = float("inf")
+            min_pair = None
+
+            feature_value_pairs = list(itertools.combinations(FeatureClustering.feature_data.keys(), r=2))
+            feature_value_ll = pool.map(calculate_pair_ll, feature_value_pairs)
+
+            for i in xrange(len(feature_value_ll)):
+                if feature_value_ll[i] <= min_ll_pair_delta:
+                    min_pair = feature_value_pairs[i]
+                    min_ll_pair_delta = feature_value_ll[i]
+
+            tmp_feature_value_data = self._join_feature_value_pair(
+                feature_index,
+                min_pair,
+                FeatureClustering.feature_data,
+            )
+
+            for feature_value_pair_index in min_pair:
+                del FeatureClustering.feature_data[feature_value_pair_index]
+
+            FeatureClustering.feature_data[str(current_extra_node_index) + '*'] = tmp_feature_value_data
+
+            extra_nodes[str(current_extra_node_index) + '*'] = Node(
+                current_extra_node_index,
+                left=extra_nodes.get(min_pair[0], Node(min_pair[0])),
+                right=extra_nodes.get(min_pair[1], Node(min_pair[1])),
+            )
+            current_extra_node_index += 1
+            log.debug('min_pair %s, extra_node_index=%s, min_ll_pair=%s', min_pair, current_extra_node_index, min_ll_pair_delta)
+            pool.close()
+
+        tree = extra_nodes[FeatureClustering.feature_data.keys()[0]]
+        return tree
 
     def cluster_feature(self, feature_name):
         feature_index = self.features_mapping[feature_name]
         feature_data = {}
+        # Для оптимизации перекладываем в словарь,
+        # ключами которого являются значения кластеризуемого фактора
         for feature_value, data in self.data.iteritems():
             feature_value_data = feature_data.setdefault(feature_value[feature_index], {})
             feature_value_data[feature_value] = data
 
-        ll = self.loglikelihood(feature_data)
         current_extra_node_index = 1
         extra_nodes = {}
 
         while len(feature_data.keys()) > 1:
+            # Инициализируем параметры для выбора пары значений для объединения
             min_ll_pair = float("inf")
             min_pair = None
             min_tmp_feature_value_data = None
+
+            # Строим все пары значений кластеризуемого фактора
             for feature_value_pair in itertools.combinations(feature_data.keys(), r=2):
-                ll_pair = ll
+                ll_pair = 0
                 tmp_feature_value_data = {}
                 for feature_value_pair_index in feature_value_pair:
                     for feature_values, (shows, clicks) in feature_data[feature_value_pair_index].iteritems():
@@ -195,14 +291,15 @@ class FeatureClustering(object):
             for feature_value_pair_index in min_pair:
                 del feature_data[feature_value_pair_index]
 
-            feature_data[current_extra_node_index] = min_tmp_feature_value_data
-            extra_nodes[current_extra_node_index] = Node(
+            feature_data[str(current_extra_node_index) + '*'] = min_tmp_feature_value_data
+
+            # Добавляем новый узел девера (иерархия кластеров)
+            extra_nodes[str(current_extra_node_index) + '*'] = Node(
                 current_extra_node_index,
                 left=extra_nodes.get(min_pair[0], Node(min_pair[0])),
                 right=extra_nodes.get(min_pair[1], Node(min_pair[1])),
             )
             current_extra_node_index += 1
-            ll = min_ll_pair
             log.debug('min_pair %s, extra_node_index=%s, min_ll_pair=%s', min_pair, current_extra_node_index, min_ll_pair)
 
         tree = extra_nodes[feature_data.keys()[0]]
@@ -210,53 +307,18 @@ class FeatureClustering(object):
 
     @staticmethod
     def load(filename):
+        """
+        Метод загружает модель иерархической кластеризации из файла
+        """
         f = file(filename)
         ctr_model = pickle.loads(f.read())
         f.close()
         return ctr_model
 
     def save(self, filename):
+        """
+        Метод сохраняет модель иерархической кластеризации в файл
+        """
         f = file(filename, 'w+')
         f.write(pickle.dumps(self))
         f.close()
-
-
-"""
-Алгоритм кластеризации
-
-Строим таблицу по каждому значению категориального фактора
-
-Если некоторые факторы real-value, то нужно их кластеризовать.
-Или просто разделить область значений данной фичи на N равных участков
-
-Профиль CTR'ов по одному фактору отличается от другого. Может быть нужно усреднять?
-Или же нужно брать во всех разрезах
-
-
-1. Определяем LL0 тренировочного датасета (средний CTR)
-2. Можем посчитать LL тренировочного датасета
-3. Формируем
-
-"""
-
-
-def main():
-    fc = FeatureClustering()
-    fc.cluster('clicklog2.train.vw', ['cat1'])
-    fc.convert_log('clicklog2.train.vw', 'clicklog2-output.train.vw',  {'mode': 'full_tree'})
-    fc.convert_log('clicklog2.test.vw', 'clicklog2-output.test.vw',  {'mode': 'full_tree'})
-    # fc.preprocess_log('clicklog2.train.vw')
-    # fc.cluster_feature('cat1')
-    # print 'cat1', len(fc.features[fc.features_mapping['cat1']])
-    # print 'cat2', len(fc.features[fc.features_mapping['cat1']])
-    # print 'data', len(fc.data.keys())
-    # print 'data', fc.data
-
-
-if __name__ == '__main__':
-    main()
-    # tree = Node(1, Node(2, Node(3), Node(4)), Node(5, Node(6), Node(7)))
-    # print tree.show()
-    #
-    # for fv, flist in tree.get_leaves_parents().items():
-    #     print fv, flist

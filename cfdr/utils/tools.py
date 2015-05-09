@@ -113,3 +113,21 @@ def compose_libffm_line(label, features):
             feature_values.append('%s:%s:1' % (feature_index, feature_value))
 
     return '%s %s' % (label, ' '.join(feature_values))
+
+
+def get_parser(name):
+    if name == 'vw':
+        return parse_vw_line
+    elif name == 'libffm':
+        return parse_libffm_line
+    else:
+        raise ValueError('invalid parser name %s' % name)
+
+
+def get_composer(name):
+    if name == 'vw':
+        return compose_vw_line
+    elif name == 'libffm':
+        return compose_libffm_line
+    else:
+        raise ValueError('invalid composer name %s' % name)

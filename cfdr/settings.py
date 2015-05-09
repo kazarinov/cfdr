@@ -10,7 +10,7 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
     'root': {
-        'level': logging.INFO,
+        'level': logging.DEBUG,
         'handlers': ['console', 'app_file'],
     },
     'formatters': {
@@ -44,5 +44,3 @@ LOGGING = {
         }
     }
 }
-
-load_dict_config(LOGGING)

@@ -2,8 +2,7 @@
 import logging
 
 from cfdr.utils.tools import parse_vw_line
-
-from .base import BaseClassifier
+from cfdr.experiments.models.base import BaseClassifier
 
 
 log = logging.getLogger(__name__)

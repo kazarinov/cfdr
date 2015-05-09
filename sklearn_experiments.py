@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from cfdr.ctr_model import CTRModel
-from cfdr.utils.helpers import Timer
-from cfdr import settings
-
 import pandas as pd
 import numpy as np
+
+from cfdr.experiments.ctr_model import CTRModel
+from cfdr.utils.helpers import Timer
 from sklearn.feature_extraction import FeatureHasher
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import GradientBoostingClassifier
@@ -17,7 +16,6 @@ from sklearn.svm import LinearSVC
 
 
 log = logging.getLogger(__name__)
-
 
 
 FEATURES_CONFIG = {
