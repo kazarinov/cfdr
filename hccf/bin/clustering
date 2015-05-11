@@ -4,10 +4,10 @@ from argparse import ArgumentParser
 import logging
 import os.path
 
-from cfdr.clustering import FeatureClustering
-from cfdr.utils.tools import get_parser, get_composer
-from cfdr.settings import LOGGING
-from cfdr.utils.logs import load_dict_config
+from hccf.clustering import FeatureClustering
+from hccf.utils.tools import get_parser, get_composer
+from hccf.settings import LOGGING
+from hccf.utils.logs import load_dict_config
 
 
 FORMATS = ['vw', 'libffm']

@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 from fabric.api import local
 
-from cfdr.utils.tools import make_vw_command
-from cfdr.utils.helpers import Timer
-from cfdr.utils.mathematics import sigmoid
-from cfdr.experiments.models.base import BaseClassifier
+from hccf.utils.tools import make_vw_command
+from hccf.utils.helpers import Timer
+from hccf.utils.mathematics import sigmoid
+from hccf.experiments.models.base import BaseClassifier
 
 
 log = logging.getLogger(__name__)

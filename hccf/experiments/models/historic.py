@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from cfdr.utils.tools import parse_vw_line
-from cfdr.experiments.models.base import BaseClassifier
+from hccf.utils.tools import parse_vw_line
+from hccf.experiments.models.base import BaseClassifier
 
 
 log = logging.getLogger(__name__)

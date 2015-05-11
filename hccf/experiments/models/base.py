@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 
-from cfdr.utils.mathematics import log_loss
+from hccf.utils.mathematics import log_loss
 
 
 class BaseClassifier(object):

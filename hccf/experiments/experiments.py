@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from cfdr.experiments.ctr_model import CTRModel
-from cfdr.experiments.models.logistic_vw import LogisticVWClassifier
-from cfdr.experiments.models.historic import HistoricClassifier
-from cfdr.experiments.models.libffm import LibFFMClassifier
-from cfdr.clustering import FeatureClustering
-from cfdr.utils.helpers import Timer
-from cfdr.utils.logs import load_dict_config
-from cfdr.utils.tools import (
+from hccf.experiments.ctr_model import CTRModel
+from hccf.experiments.models.logistic_vw import LogisticVWClassifier
+from hccf.experiments.models.historic import HistoricClassifier
+from hccf.experiments.models.libffm import LibFFMClassifier
+from hccf.clustering import FeatureClustering
+from hccf.utils.helpers import Timer
+from hccf.utils.logs import load_dict_config
+from hccf.utils.tools import (
     parse_vw_line,
     parse_libffm_line,
     compose_libffm_line,
     compose_vw_line,
 )
-from cfdr.settings import LOGGING
+from hccf.settings import LOGGING
 
 
 log = logging.getLogger(__name__)

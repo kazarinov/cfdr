@@ -4,9 +4,9 @@ import logging
 import numpy as np
 from fabric.api import local
 
-from cfdr.utils.tools import make_command, parse_libffm_line
-from cfdr.utils.helpers import Timer
-from cfdr.experiments.models.base import BaseClassifier
+from hccf.utils.tools import make_command, parse_libffm_line
+from hccf.utils.helpers import Timer
+from hccf.experiments.models.base import BaseClassifier
 
 
 log = logging.getLogger(__name__)

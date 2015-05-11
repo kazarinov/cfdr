@@ -5,12 +5,12 @@ import pickle
 import numpy as np
 from fabric.api import local
 
-from cfdr.utils.helpers import silentremove
-from cfdr.utils.mathematics import (
+from hccf.utils.helpers import silentremove
+from hccf.utils.mathematics import (
     sigmoid,
     loglikelihood,
 )
-from cfdr.utils.tools import (
+from hccf.utils.tools import (
     compose_vw_line,
     compose_libffm_line,
 )

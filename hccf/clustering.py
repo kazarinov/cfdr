@@ -4,8 +4,8 @@ import logging
 import pickle
 import multiprocessing
 
-from cfdr.utils.tools import parse_vw_line, compose_vw_line
-from cfdr.utils.mathematics import loglikelihood
+from hccf.utils.tools import parse_vw_line, compose_vw_line
+from hccf.utils.mathematics import loglikelihood
 
 
 log = logging.getLogger(__name__)
