@@ -6,11 +6,12 @@ import logging
 from .utils.logs import load_dict_config
 
 
+# настройки логирования
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
     'root': {
-        'level': logging.DEBUG,
+        'level': logging.INFO,
         'handlers': ['console', 'app_file'],
     },
     'formatters': {

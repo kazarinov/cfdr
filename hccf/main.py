@@ -10,7 +10,7 @@ from hccf.settings import LOGGING
 from hccf.utils.logs import load_dict_config
 
 
-FORMATS = ['vw', 'libffm']
+FORMATS = ['vw', 'libffm']  # возможные форматы входных данных
 DEFAULT_FORMAT = 'vw'
 
 

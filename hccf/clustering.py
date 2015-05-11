@@ -12,12 +12,21 @@ log = logging.getLogger(__name__)
 
 
 class Node(object):
+    """
+    Класс представляющий узел бинарного дерева иерархии.
+    """
     def __init__(self, value, left=None, right=None):
         self.value = value
         self.left = left
         self.right = right
 
     def show(self, depth=0):
+        """
+        Метод возвращяющий строку для печати дерева на экране
+
+        :param depth: отсуп узла при отображении в консоли
+        :return: строку для печати в консоли
+        """
         ret = ""
 
         # Print right branch
@@ -34,6 +43,12 @@ class Node(object):
         return ret
 
     def get_leaves_parents(self, parents=None):
+        """
+        Метод возвращяющий список родителей данного узла
+
+        :param parents: list родители узла предыдущего уровня
+        :return: list список родителей данного узла
+        """
         result = {}
 
         if parents is None:
@@ -53,6 +68,12 @@ class Node(object):
 
 
 def calculate_pair_ll(feature_value_pair):
+    """
+    Функция, вычисляющая likelihood пары значений категориального фактора
+
+    :param feature_value_pair: пара значений категориального фактора
+    :return: float значение likelihood
+    """
     ll_pair = 0
     tmp_feature_value_data = {}
     for feature_value_pair_index in feature_value_pair:
@@ -76,10 +97,16 @@ def calculate_pair_ll(feature_value_pair):
 
 
 class FeatureClustering(object):
+    """
+    Класс для построения иерархической кластеризации значений категориальных факторов
+    """
     feature_data = None
     feature_index = None
 
     def __init__(self, processes=1):
+        """
+        :param processes: количество процессов для параллельного режима, если =1, то однопоточный режим
+        """
         self.processes = processes
 
         self.features_mapping = None
@@ -90,7 +117,19 @@ class FeatureClustering(object):
         self.clicks_count = 0
         self.trees = None
 
-    def preprocess_log(self, logfile, slice_features=None, parser=None):
+    def _preprocess_log(self, logfile, slice_features=None, parser=None):
+        """
+        Метод обрабатывающий файл и инициализующий
+         - словарь self.data, ключами которого являются пары значений в событиях,
+            а значением количество кликов и показов
+         - словарь self.features, ключи которого порядковые индексы факторов в файле,
+            а значения – возможные значения данного фактора
+
+        :param logfile: string файл для обработки
+        :param slice_features: названия факторов, по которым происходит сред
+        :param parser: название формата для обработка файла (vw | libffm)
+        :return:
+        """
         if parser is None:
             parser = parse_vw_line
 
@@ -119,6 +158,25 @@ class FeatureClustering(object):
             self.data[example_values] = (shows, clicks)
 
     def convert_log(self, input_logfile, output_logfile, output_params, parser=None, composer=None):
+        """
+        Метод, преобразующий исходных набов данных в набор данных с дополнительными факторами после кластеризации
+
+        :param input_logfile: string входной файл
+        :param output_logfile: string выходной файл
+        :param output_params: dict параметры дополнительных факторов
+             output_params: {
+                'mode': <mode>,
+                'levels': 5
+             }
+
+            <mode>:
+             * full_tree - полное дерево до корня с листьями
+             * tree_without_leaves - дерево без листьев
+             * part_tree
+
+        :param parser: func функция-парсер исходного набора данных
+        :param composer: func функция-композитор выходного набора
+        """
         if parser is None:
             parser = parse_vw_line
 
@@ -152,9 +210,17 @@ class FeatureClustering(object):
             output_file.write(composer(example_params['label'], features) + '\n')
 
     def loglikelihood0(self):
+        """
+        Подсчет метрики loglikelihood для обучаемой модели
+        :return: float loglikelihood
+        """
         return loglikelihood(self.shows_count, self.clicks_count)
 
     def loglikelihood(self, feature_data):
+        """
+        Подсчет метрики loglikelihood для обучаемой модели
+        :return: float loglikelihood
+        """
         ll = 0
         for feature_value, feature_value_data in feature_data.iteritems():
             for _, (shows, clicks) in feature_value_data.iteritems():
@@ -163,24 +229,22 @@ class FeatureClustering(object):
 
     def cluster(self, input_logfile, tree_features, slice_features=None, parser=None):
         """
-        output_params: {
-            'mode': <mode>,
-            'levels': 5
-        }
+        Метод для построения иерархии значений категориальных факторов
 
-        <mode>:
-         * full_tree - полное дерево до корня с листьями
-         * tree_without_leaves - дерево без листьев
-         * part_tree
+        :param input_logfile: string входной файл
+        :param tree_features: string список названий категориальных факторов для кластеризации
+        :param slice_features: list список "разрезов" для построения иерархии
+        :param parser: func функция-парсер исходного набора данных
+        :return: dict деревья (иерархии кластеров) для каждого категориального фактора, переданного в tree_features
         """
-        self.preprocess_log(input_logfile, slice_features=slice_features, parser=parser)
+        self._preprocess_log(input_logfile, slice_features=slice_features, parser=parser)
 
         self.trees = {}
         for feature_nane in tree_features:
             if self.processes > 1:
-                self.trees[feature_nane] = self.cluster_feature_parallel(feature_nane)
+                self.trees[feature_nane] = self._cluster_feature_parallel(feature_nane)
             else:
-                self.trees[feature_nane] = self.cluster_feature(feature_nane)
+                self.trees[feature_nane] = self._cluster_feature(feature_nane)
         return self.trees
 
     def _join_feature_value_pair(self, feature_index, feature_value_pair, feature_data):
@@ -198,7 +262,7 @@ class FeatureClustering(object):
                     tmp_feature_value_data[tmp_feature_values] = (shows + shows_tmp, clicks + clicks_tmp)
         return tmp_feature_value_data
 
-    def cluster_feature_parallel(self, feature_name):
+    def _cluster_feature_parallel(self, feature_name):
         feature_index = FeatureClustering.feature_index = self.features_mapping[feature_name]
         FeatureClustering.feature_data = {}
         for feature_value, data in self.data.iteritems():
@@ -244,7 +308,7 @@ class FeatureClustering(object):
         tree = extra_nodes[FeatureClustering.feature_data.keys()[0]]
         return tree
 
-    def cluster_feature(self, feature_name):
+    def _cluster_feature(self, feature_name):
         feature_index = self.features_mapping[feature_name]
         feature_data = {}
         # Для оптимизации перекладываем в словарь,
@@ -309,6 +373,7 @@ class FeatureClustering(object):
     def load(filename):
         """
         Метод загружает модель иерархической кластеризации из файла
+        :return: FeatureClustering
         """
         f = file(filename)
         ctr_model = pickle.loads(f.read())
