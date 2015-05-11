@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import itertools
 import logging
 import pickle
@@ -107,6 +108,9 @@ class FeatureClustering(object):
         """
         :param processes: количество процессов для параллельного режима, если =1, то однопоточный режим
         """
+        if not isinstance(processes, int) or processes < 1:
+            raise ValueError('‘processes’ param has to be positive integer')
+
         self.processes = processes
 
         self.features_mapping = None
@@ -219,7 +223,17 @@ class FeatureClustering(object):
         :param parser: func функция-парсер исходного набора данных
         :return: dict деревья (иерархии кластеров) для каждого категориального фактора, переданного в tree_features
         """
+        if not os.path.isfile(input_logfile):
+            raise ValueError('no input file `%s` found' % input_logfile)
+        elif len(tree_features) <= 0:
+            raise ValueError('`tree_features` param was not passed')
+
         self._preprocess_log(input_logfile, slice_features=slice_features, parser=parser)
+
+        feature_names = self.features_mapping.keys()
+        for feature_nane in tree_features:
+            if feature_nane not in feature_names:
+                raise ValueError('feature `%s` was not found in input log' % feature_nane)
 
         self.trees = {}
         for feature_nane in tree_features:
