@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from hccf.experiments.ctr_model import CTRModel
-from hccf.experiments.models.logistic_vw import LogisticVWClassifier
-from hccf.experiments.models.historic import HistoricClassifier
-from hccf.experiments.models.libffm import LibFFMClassifier
+from ctr_model import CTRModel
+from algorithms.logistic_vw import LogisticVWClassifier
+from algorithms.historic import HistoricClassifier
+from algorithms.libffm import LibFFMClassifier
+
 from hccf.clustering import FeatureClustering
 from hccf.utils.helpers import Timer
 from hccf.utils.logs import load_dict_config

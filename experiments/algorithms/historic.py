@@ -2,7 +2,8 @@
 import logging
 
 from hccf.utils.tools import parse_vw_line
-from hccf.experiments.models.base import BaseClassifier
+
+from .base import BaseClassifier
 
 
 log = logging.getLogger(__name__)

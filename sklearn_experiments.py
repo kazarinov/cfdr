@@ -4,7 +4,7 @@ import logging
 import pandas as pd
 import numpy as np
 
-from hccf.experiments.ctr_model import CTRModel
+from experiments.ctr_model import CTRModel
 from hccf.utils.helpers import Timer
 from sklearn.feature_extraction import FeatureHasher
 from sklearn.pipeline import Pipeline

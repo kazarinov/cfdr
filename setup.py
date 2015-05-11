@@ -12,8 +12,13 @@ setup(
     author_email='andrei.kazarinov@gmail.com',
     keywords=["hierarchical clustering", "dimensionality reduction"],
 
-    packages=find_packages(exclude=('tests', 'tests.*')),
-    install_requires=open('./requirements.txt').read(),
+    packages=[
+        'hccf',
+        'hccf.utils',
+    ],
+    install_requires = [
+        "scipy>=0.15.1",
+    ],
     entry_points={
         "console_scripts": [
             "hccf = hccf.main:main"

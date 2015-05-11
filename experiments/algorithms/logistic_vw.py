@@ -8,7 +8,8 @@ from fabric.api import local
 from hccf.utils.tools import make_vw_command
 from hccf.utils.helpers import Timer
 from hccf.utils.mathematics import sigmoid
-from hccf.experiments.models.base import BaseClassifier
+
+from .base import BaseClassifier
 
 
 log = logging.getLogger(__name__)

@@ -6,7 +6,8 @@ from fabric.api import local
 
 from hccf.utils.tools import make_command, parse_libffm_line
 from hccf.utils.helpers import Timer
-from hccf.experiments.models.base import BaseClassifier
+
+from .base import BaseClassifier
 
 
 log = logging.getLogger(__name__)
