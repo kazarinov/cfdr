@@ -1,7 +1,7 @@
+numpy==1.9.2
 scipy
 
 pandas==0.16.0
-numpy==1.9.2
 ete2==2.2.1072
 Fabric==1.10.1
 

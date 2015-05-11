@@ -209,30 +209,12 @@ class FeatureClustering(object):
 
             output_file.write(composer(example_params['label'], features) + '\n')
 
-    def loglikelihood0(self):
-        """
-        Подсчет метрики loglikelihood для обучаемой модели
-        :return: float loglikelihood
-        """
-        return loglikelihood(self.shows_count, self.clicks_count)
-
-    def loglikelihood(self, feature_data):
-        """
-        Подсчет метрики loglikelihood для обучаемой модели
-        :return: float loglikelihood
-        """
-        ll = 0
-        for feature_value, feature_value_data in feature_data.iteritems():
-            for _, (shows, clicks) in feature_value_data.iteritems():
-                ll += loglikelihood(shows, clicks)
-        return ll
-
     def cluster(self, input_logfile, tree_features, slice_features=None, parser=None):
         """
         Метод для построения иерархии значений категориальных факторов
 
         :param input_logfile: string входной файл
-        :param tree_features: string список названий категориальных факторов для кластеризации
+        :param tree_features: list список названий категориальных факторов для кластеризации
         :param slice_features: list список "разрезов" для построения иерархии
         :param parser: func функция-парсер исходного набора данных
         :return: dict деревья (иерархии кластеров) для каждого категориального фактора, переданного в tree_features
@@ -248,6 +230,14 @@ class FeatureClustering(object):
         return self.trees
 
     def _join_feature_value_pair(self, feature_index, feature_value_pair, feature_data):
+        """
+        Метод для объединения значений в кластер
+
+        :param feature_index: int
+        :param feature_value_pair: tuple (feature_value1, feature_value2)
+        :param feature_data: dict
+        :return: dict
+        """
         tmp_feature_value_data = {}
         for feature_value_pair_index in feature_value_pair:
             for feature_values, (shows, clicks) in feature_data[feature_value_pair_index].iteritems():
@@ -263,6 +253,13 @@ class FeatureClustering(object):
         return tmp_feature_value_data
 
     def _cluster_feature_parallel(self, feature_name):
+        """
+        Метод для построения иерархии значений категориального фактора <feature_name> в многопоточном режиме
+        Количество процессов задается в конструкторе (параметр processes)
+
+        :param feature_name: string название категориального фактора
+        :return: Node дерево (иерархии кластеров) для категориального фактора
+        """
         feature_index = FeatureClustering.feature_index = self.features_mapping[feature_name]
         FeatureClustering.feature_data = {}
         for feature_value, data in self.data.iteritems():
@@ -309,6 +306,12 @@ class FeatureClustering(object):
         return tree
 
     def _cluster_feature(self, feature_name):
+        """
+        Метод для построения иерархии значений категориального фактора <feature_name> в однопоточном режиме
+
+        :param feature_name: string название категориального фактора
+        :return: Node дерево (иерархии кластеров) для категориального фактора
+        """
         feature_index = self.features_mapping[feature_name]
         feature_data = {}
         # Для оптимизации перекладываем в словарь,
