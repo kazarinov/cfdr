@@ -67,6 +67,50 @@ class Node(object):
 
         return result
 
+    def to_gml(self):
+        """
+        Метод возвращает GML отображение графа
+        """
+        nodes, edges = self._gml()
+        nodes[self.value] = self.value
+
+        res = "graph\n[\n"
+        for node_index, node_label in enumerate(nodes.keys()):
+            nodes[node_label] = node_index
+            res += ('  node\n  [\n    id %i\n    label "%s"\n  ]\n' %
+                    (node_index, node_label))
+        for edge in edges:
+            res += ('  edge\n  [\n    source %i\n    target %i\n  ]\n' %
+                    (nodes[edge["source"]], nodes[edge["target"]]))
+        res += "]\n"
+        return res
+
+    def _gml(self):
+        nodes = {}
+        edges = []
+
+        if self.left is not None:
+            nodes[self.left.value] = self.left.value
+            edges.append({
+                'source': self.value,
+                'target': self.left.value,
+            })
+            left_nodes, left_edges = self.left._gml()
+            nodes.update(left_nodes)
+            edges += left_edges
+
+        if self.right is not None:
+            nodes[self.right.value] = self.right.value
+            edges.append({
+                'source': self.value,
+                'target': self.right.value,
+            })
+            right_nodes, right_edges = self.right._gml()
+            nodes.update(right_nodes)
+            edges += right_edges
+
+        return nodes, edges
+
 
 def calculate_pair_ll(feature_value_pair):
     """
@@ -161,6 +205,16 @@ class FeatureClustering(object):
                 self.clicks_count += 1
             self.data[example_values] = (shows, clicks)
 
+    def gml_graph(self, feature):
+        """
+        Метод возвращает отображение иерархии значений категориального фактора в GML формате
+        :param feature: название фактора
+        :return: string
+        """
+        if feature not in self.trees.keys():
+            raise ValueError('no hierarchy for feature `%s`' % feature)
+        return self.trees[feature].to_gml()
+
     def convert_log(self, input_logfile, output_logfile, output_params, parser=None, composer=None):
         """
         Метод, преобразующий исходных набов данных в набор данных с дополнительными факторами после кластеризации
@@ -231,16 +285,16 @@ class FeatureClustering(object):
         self._preprocess_log(input_logfile, slice_features=slice_features, parser=parser)
 
         feature_names = self.features_mapping.keys()
-        for feature_nane in tree_features:
-            if feature_nane not in feature_names:
-                raise ValueError('feature `%s` was not found in input log' % feature_nane)
+        for feature_name in tree_features:
+            if feature_name not in feature_names:
+                raise ValueError('feature `%s` was not found in input log' % feature_name)
 
         self.trees = {}
-        for feature_nane in tree_features:
+        for feature_name in tree_features:
             if self.processes > 1:
-                self.trees[feature_nane] = self._cluster_feature_parallel(feature_nane)
+                self.trees[feature_name] = self._cluster_feature_parallel(feature_name)
             else:
-                self.trees[feature_nane] = self._cluster_feature(feature_nane)
+                self.trees[feature_name] = self._cluster_feature(feature_name)
         return self.trees
 
     def _join_feature_value_pair(self, feature_index, feature_value_pair, feature_data):
@@ -305,10 +359,11 @@ class FeatureClustering(object):
             for feature_value_pair_index in min_pair:
                 del FeatureClustering.feature_data[feature_value_pair_index]
 
-            FeatureClustering.feature_data[str(current_extra_node_index) + '*'] = tmp_feature_value_data
+            current_extra_node_label = str(current_extra_node_index) + '*'
+            FeatureClustering.feature_data[current_extra_node_label] = tmp_feature_value_data
 
-            extra_nodes[str(current_extra_node_index) + '*'] = Node(
-                current_extra_node_index,
+            extra_nodes[current_extra_node_label] = Node(
+                current_extra_node_label,
                 left=extra_nodes.get(min_pair[0], Node(min_pair[0])),
                 right=extra_nodes.get(min_pair[1], Node(min_pair[1])),
             )
@@ -373,11 +428,13 @@ class FeatureClustering(object):
             for feature_value_pair_index in min_pair:
                 del feature_data[feature_value_pair_index]
 
-            feature_data[str(current_extra_node_index) + '*'] = min_tmp_feature_value_data
+
+            current_extra_node_label = str(current_extra_node_index) + '*'
+            feature_data[current_extra_node_label] = min_tmp_feature_value_data
 
             # Добавляем новый узел девера (иерархия кластеров)
-            extra_nodes[str(current_extra_node_index) + '*'] = Node(
-                current_extra_node_index,
+            extra_nodes[current_extra_node_label] = Node(
+                current_extra_node_label,
                 left=extra_nodes.get(min_pair[0], Node(min_pair[0])),
                 right=extra_nodes.get(min_pair[1], Node(min_pair[1])),
             )
@@ -394,9 +451,9 @@ class FeatureClustering(object):
         :return: FeatureClustering
         """
         f = file(filename)
-        ctr_model = pickle.loads(f.read())
+        model = pickle.loads(f.read())
         f.close()
-        return ctr_model
+        return model
 
     def save(self, filename):
         """

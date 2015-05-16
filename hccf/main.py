@@ -43,6 +43,11 @@ def convert(input, output, model, type, levels, parser, composer):
     )
 
 
+def graph(model, feature):
+    fc = FeatureClustering.load(model)
+    print fc.gml_graph(feature)
+
+
 def main():
     argparser = ArgumentParser(description='Agglomerative Hierarchical Clustering')
     subparsers = argparser.add_subparsers(help='sub-command help', dest='command')
@@ -103,8 +108,14 @@ def main():
         choices=FORMATS,
     )
 
+    # graph command
+    parser_graph = subparsers.add_parser('graph', help='GML graph')
+    parser_graph.add_argument('-m', '--model', dest="model", help="model file", required=True)
+    parser_graph.add_argument('-f', '--feature', dest="feature", help="feature name", required=True)
+
+
     options = argparser.parse_args()
-    logging_level = logging.DEBUG if options.debug else logging.INFO
+    logging_level = logging.DEBUG if getattr(options, 'debug', False) else logging.INFO
     load_dict_config(LOGGING, logging_level)
 
     if options.command == 'cluster':
@@ -131,6 +142,14 @@ def main():
             levels=options.levels,
             parser=options.parser,
             composer=options.composer,
+        )
+    elif options.command == 'graph':
+        if not os.path.isfile(options.model):
+            argparser.error('no model file `%s` found' % options.model)
+
+        graph(
+            model=options.model,
+            feature=options.feature,
         )
     else:
         argparser.error('no command `%s` found' % options.command)
