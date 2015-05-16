@@ -315,6 +315,7 @@ class FeatureClustering(object):
             current_extra_node_index += 1
             log.debug('min_pair %s, extra_node_index=%s, min_ll_pair=%s', min_pair, current_extra_node_index, min_ll_pair_delta)
             pool.close()
+            pool.join()
 
         tree = extra_nodes[FeatureClustering.feature_data.keys()[0]]
         return tree
