@@ -34,7 +34,7 @@ LOGGING = {
             'level': logging.DEBUG,
             'class': 'logging.FileHandler',
             'formatter': 'verbose',
-            'filename': 'ctr.log',
+            'filename': None,
         },
     },
     'loggers': {

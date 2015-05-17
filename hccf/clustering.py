@@ -3,6 +3,7 @@ import os
 import itertools
 import logging
 import pickle
+import copy
 import multiprocessing
 
 from hccf.utils.tools import parse_vw_line, compose_vw_line
@@ -184,16 +185,28 @@ class FeatureClustering(object):
         for line in open(logfile):
             example_params = parser(line)
             if self.features is None:
-                self.features = [set() for i in xrange(len(example_params['features']))]
-                self.features_mapping = dict([(feature_name, feature_index)
-                                              for feature_index, (feature_name, feature_value) in
-                                              enumerate(example_params['features'])])
+                if slice_features is not None:
+                    self.features = [set() for i in xrange(len(slice_features))]
+                    self.features_mapping = dict([(feature_name, feature_index)
+                                                  for feature_index, feature_name in
+                                                  enumerate(slice_features)])
+                else:
+                    self.features = [set() for i in xrange(len(example_params['features']))]
+                    self.features_mapping = dict([(feature_name, feature_index)
+                                                  for feature_index, (feature_name, feature_value) in
+                                                  enumerate(example_params['features'])])
 
-            for feature_index, feature in enumerate(example_params['features']):
-                feature_name, feature_value = feature
-                self.features[feature_index].add(feature_value)
+            for feature_name, feature_value in example_params['features']:
+                feature_index = self.features_mapping.get(feature_name)
+                if feature_index is not None:
+                    self.features[feature_index].add(feature_value)
 
-            example_values = tuple((feature_value for feature_name, feature_value in example_params['features']))
+            if slice_features is not None:
+                feature_example_dict = dict(example_params['features'])
+                example_values = tuple((feature_example_dict[feature_name] for feature_name in slice_features))
+            else:
+                example_values = tuple((feature_value for feature_name, feature_value in example_params['features']))
+
             if example_values not in self.data:
                 self.data[example_values] = (0, 0)
 
@@ -282,7 +295,11 @@ class FeatureClustering(object):
         elif len(tree_features) <= 0:
             raise ValueError('`tree_features` param was not passed')
 
-        self._preprocess_log(input_logfile, slice_features=slice_features, parser=parser)
+        features = copy.copy(tree_features)
+        if slice_features is not None:
+            features += slice_features
+        features = list(set(features))
+        self._preprocess_log(input_logfile, slice_features=features, parser=parser)
 
         feature_names = self.features_mapping.keys()
         for feature_name in tree_features:

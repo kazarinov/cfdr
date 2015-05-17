@@ -10,6 +10,7 @@ from hccf.settings import LOGGING
 from hccf.utils.logs import load_dict_config
 
 
+LOF_FILENAME = 'hccf.log'
 FORMATS = ['vw', 'libffm']  # возможные форматы входных данных
 DEFAULT_FORMAT = 'vw'
 
@@ -116,7 +117,7 @@ def main():
 
     options = argparser.parse_args()
     logging_level = logging.DEBUG if getattr(options, 'debug', False) else logging.INFO
-    load_dict_config(LOGGING, logging_level)
+    load_dict_config(LOGGING, logging_level, LOF_FILENAME)
 
     if options.command == 'cluster':
         if not os.path.isfile(options.input):
