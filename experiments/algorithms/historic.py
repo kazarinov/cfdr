@@ -69,3 +69,5 @@ class HistoricClassifier(BaseClassifier):
             # print (example_values_clicks + 2) / (example_values_shows + 2/ctr0)
             ctr = (example_values_clicks + 2) / (example_values_shows + 2/ctr0)
             predictions_file.write(str(ctr) + "\n")
+
+        predictions_file.close()

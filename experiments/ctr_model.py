@@ -267,38 +267,3 @@ class CTRModel(object):
 
     def likelihood_ratio(self):
         return self.loglikelihood0() - self.loglikelihood()
-
-
-if __name__ == '__main__':
-    FEATURES_CONFIG = {
-        'cat1': {
-            'count': 100,
-            'loc': 0.0,
-            'scale': 0.5,
-            'type': 'tree',
-        },
-        'cat2': {
-            'count': 100,
-            'loc': 0.0,
-            'scale': 0.5,
-            'type': 'tree',
-        },
-        'cat1xcat2': {
-            'loc': 0.0,
-            'scale': 0.4,
-            'parts': ['cat1', 'cat2'],
-        }
-    }
-    ctr_model = CTRModel(FEATURES_CONFIG, free_coef=-1, lam=20)
-    ctr_model.init()
-
-    ll = ctr_model.loglikelihood()
-    ll0 = ctr_model.loglikelihood0()
-    likelihood_ratio = ctr_model.likelihood_ratio()
-    print 'loglikelihood', ll
-    print 'loglikelihood0', ll0
-    print 'mutual_ilikelihood_rationformation', likelihood_ratio
-    print 'shows', np.sum(ctr_model.shows)
-
-    ctr_model.generate_log('clicklog2', format='vw', train_length=2000000, test_length=1000000)
-    ctr_model.save('ctr_model2.dat')

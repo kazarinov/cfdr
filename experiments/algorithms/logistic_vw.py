@@ -29,7 +29,6 @@ class LogisticVWClassifier(BaseClassifier):
             'hash': 'all',
             # 'l1': 1e-8,
             'l2': 1e-8,
-            'q': ['ab'],
         }
         self.vw_params.update(kwargs)
         self.debug = debug
