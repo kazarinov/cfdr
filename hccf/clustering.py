@@ -445,7 +445,6 @@ class FeatureClustering(object):
             for feature_value_pair_index in min_pair:
                 del feature_data[feature_value_pair_index]
 
-
             current_extra_node_label = str(current_extra_node_index) + '*'
             feature_data[current_extra_node_label] = min_tmp_feature_value_data
 

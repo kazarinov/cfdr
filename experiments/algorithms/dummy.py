@@ -29,7 +29,7 @@ class DummyClassifier(BaseClassifier):
         return self.clicks_count / float(self.shows_count)
 
     def loglikelihood0(self):
-        return loglikelihood(self.shows_count, self.clicks_count)
+        return loglikelihood(self.shows_count, self.clicks_count) / self.shows_count
 
     def predict(self, test_filename, predictions_filename):
         ctr = self.ctr()

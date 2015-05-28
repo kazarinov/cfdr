@@ -63,11 +63,17 @@ def parse_vw_line(line):
     params['label'] = int(label)
     params['features'] = []
     for part in parts:
-        name, value = part.split(' ')
-        try:
-            value = int(value)
-        except ValueError:
-            pass
+        name_values = part.split(' ')
+
+        if len(name_values) == 2:
+            name, value = name_values
+            try:
+                value = int(value)
+            except ValueError:
+                pass
+        else:
+            name = name_values[0]
+            value = name_values[1:]
 
         params['features'].append((name, value))
 
@@ -108,8 +114,10 @@ def compose_libffm_line(label, features):
     feature_values = []
     for feature_index, (feature_name, feature_value) in enumerate(features):
         if isinstance(feature_value, list):
-            feature_values.extend(map(lambda x: '%s:%s:1' % (feature_index, x), feature_value))
+            feature_values.extend(map(lambda x: '%s:%s:1' % (feature_index, x.strip('*')), feature_value))
         else:
+            if isinstance(feature_value, str):
+                feature_value = feature_value.strip('*')
             feature_values.append('%s:%s:1' % (feature_index, feature_value))
 
     return '%s %s' % (label, ' '.join(feature_values))
@@ -131,3 +139,11 @@ def get_composer(name):
         return compose_libffm_line
     else:
         raise ValueError('invalid composer name %s' % name)
+
+
+def vw2libffm(input_filename, output_filename):
+    output_filename = open(output_filename, 'w+')
+    for line in open(input_filename):
+        vw_params = parse_vw_line(line)
+        output_filename.write(compose_libffm_line(vw_params['label'], vw_params['features']) + '\n')
+    output_filename.close()
