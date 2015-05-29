@@ -82,8 +82,8 @@ def parse_vw_line(line):
 
 def compose_vw_line(label, features):
     label = 1 if label > 0 else -1
-    vw_feature_values = map(lambda t: '%s %s ' % (t[0], ' '.join(map(str, t[1])) if isinstance(t[1], list) else t[1]), features)
-    return '%s |%s' % (label, '|'.join(vw_feature_values))
+    vw_feature_values = map(lambda t: '%s %s' % (t[0], ' '.join(map(str, t[1])) if isinstance(t[1], list) else t[1]), features)
+    return '%s |%s' % (label, ' |'.join(vw_feature_values))
 
 
 def parse_libffm_line(line):
